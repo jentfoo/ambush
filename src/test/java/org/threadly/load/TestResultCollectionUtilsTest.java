@@ -5,6 +5,7 @@ import static org.junit.Assert.*;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 import org.junit.After;
 import org.junit.Before;
@@ -82,7 +83,24 @@ public class TestResultCollectionUtilsTest {
   }
   
   @Test
-  public void getAverageRuntimeNanosTest() throws InterruptedException {
-    assertEquals(PROCESSING_TIME_NANOS, TestResultCollectionUtils.getAverageRuntimeNanos(futures), 0);
+    public void getAverageRuntimeTest() throws InterruptedException {
+    assertEquals(PROCESSING_TIME_NANOS, 
+                 TestResultCollectionUtils.getAverageRuntime(futures, TimeUnit.NANOSECONDS), 0);
+  }
+  
+  @Test
+  public void getLongestRuntimeStepPassStepTest() throws InterruptedException {
+    TestResult longResult = new TestResult("foo", PROCESSING_TIME_NANOS + 1);
+    futures.add(FutureUtils.immediateResultFuture(longResult));
+    
+    assertTrue(longResult == TestResultCollectionUtils.getLongestRuntimeStep(futures));
+  }
+  
+  @Test
+  public void getLongestRuntimeStepFailStepTest() throws InterruptedException {
+    TestResult longResult = new TestResult("foo", PROCESSING_TIME_NANOS + 1, new Exception());
+    futures.add(FutureUtils.immediateResultFuture(longResult));
+    
+    assertTrue(longResult == TestResultCollectionUtils.getLongestRuntimeStep(futures));
   }
 }

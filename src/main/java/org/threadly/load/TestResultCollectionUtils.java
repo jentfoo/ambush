@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 
 /**
  * <p>Some utilities for when dealing with a collection of {@link TestResult}'s.  One of the most 
@@ -36,6 +37,8 @@ public class TestResultCollectionUtils {
         if (tr.getError() != null) {
           return tr;
         }
+      } catch (CancellationException e) {
+        // likely was canceled already from another thread
       } catch (ExecutionException e) {
         // should not be possible
         throw new RuntimeException(e);
@@ -83,10 +86,11 @@ public class TestResultCollectionUtils {
    * completed (or were canceled).
    * 
    * @param futures Future collection to iterate over and inspect
+   * @param timeUnit Time unit that the resulting time should be returned in
    * @return Average nanoseconds spent per test step 
    * @throws InterruptedException Thrown if the thread is interrupted while waiting for {@link TestResult}
    */
-  public static double getAverageRuntimeNanos(Collection<? extends Future<TestResult>> futures) 
+  public static double getAverageRuntime(Collection<? extends Future<TestResult>> futures, TimeUnit timeUnit) 
       throws InterruptedException {
     double count = 0;
     double totalNanos = 0;
@@ -95,7 +99,7 @@ public class TestResultCollectionUtils {
       try {
         TestResult tr = it.next().get();
         count++;
-        totalNanos += tr.runTimeInNanos();
+        totalNanos += tr.getRunTime(timeUnit);
       } catch (CancellationException e) {
         // possible if canceled after a failure event
       } catch (ExecutionException e) {
@@ -105,5 +109,33 @@ public class TestResultCollectionUtils {
     }
     
     return totalNanos / count;
+  }
+  
+  /**
+   * Searched through the test results to find which test step took the longest to execute.
+   * 
+   * @param futures Future collection to iterate over and inspect
+   * @return TestResult which took the longest to execute in the set
+   * @throws InterruptedException Thrown if the thread is interrupted while waiting for {@link TestResult}
+   */
+  public static TestResult getLongestRuntimeStep(Collection<? extends Future<TestResult>> futures) 
+      throws InterruptedException {
+    TestResult longestStep = null;
+    Iterator<? extends Future<TestResult>> it = futures.iterator();
+    while (it.hasNext()) {
+      try {
+        TestResult tr = it.next().get();
+        if (longestStep == null || longestStep.getRunTime(TimeUnit.NANOSECONDS) < tr.getRunTime(TimeUnit.NANOSECONDS)) {
+          longestStep = tr;
+        }
+      } catch (CancellationException e) {
+        // possible if canceled after a failure event
+      } catch (ExecutionException e) {
+        // should not be possible
+        throw new RuntimeException(e);
+      }
+    }
+    
+    return longestStep;
   }
 }

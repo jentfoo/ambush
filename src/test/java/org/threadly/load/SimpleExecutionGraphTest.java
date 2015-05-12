@@ -34,18 +34,18 @@ public class SimpleExecutionGraphTest {
     builder.addStep(step1);
     builder.addStep(step2);
     
-    List<? extends ListenableFuture<TestResult>> futures = builder.startScript();
+    List<? extends ListenableFuture<TestResult>> futures = builder.build().startScript();
     assertEquals(2, futures.size());
     
     TestResult tr1 = futures.get(0).get();
     assertNull(tr1.getError());
     assertEquals(identifier1, tr1.getDescription());
-    assertTrue(tr1.runTimeInNanos() >= TimeUnit.MILLISECONDS.toNanos(runTime));
+    assertTrue(tr1.getRunTime(TimeUnit.MILLISECONDS) >= runTime);
     
     TestResult tr2 = futures.get(0).get();
     assertNull(tr2.getError());
     assertEquals(identifier1, tr2.getDescription());
-    assertTrue(tr2.runTimeInNanos() >= TimeUnit.MILLISECONDS.toNanos(runTime));
+    assertTrue(tr1.getRunTime(TimeUnit.MILLISECONDS) >= runTime);
   }
   
   @Test
@@ -60,7 +60,7 @@ public class SimpleExecutionGraphTest {
     List<TestStep> steps2 = makeTestSteps(null, TEST_COMPLEXITY);
     addSteps(steps2, builder);
     
-    List<? extends ListenableFuture<TestResult>> futures = builder.startScript();
+    List<? extends ListenableFuture<TestResult>> futures = builder.build().startScript();
     assertEquals(TEST_COMPLEXITY * 2 + 1, futures.size());
     
     for (int i = 0; i < futures.size(); i++) {
@@ -69,7 +69,7 @@ public class SimpleExecutionGraphTest {
       } else if (i == steps1.size()) {
         TestResult tr = futures.get(i).get();
         assertNotNull(tr.getError());
-        assertTrue(tr.runTimeInNanos() >= TimeUnit.MILLISECONDS.toNanos(failreRunTime));
+        assertTrue(tr.getRunTime(TimeUnit.MILLISECONDS) >= failreRunTime);
       } else {
         try {
           futures.get(i).get();
@@ -90,14 +90,14 @@ public class SimpleExecutionGraphTest {
     ParallelScriptBuilder builder = new ParallelScriptBuilder();
     builder.addStep(step, runCount);
     
-    List<? extends ListenableFuture<TestResult>> futures = builder.startScript();
+    List<? extends ListenableFuture<TestResult>> futures = builder.build().startScript();
     assertEquals(runCount, futures.size());
     
     TestResult tr = futures.get(0).get();
     
     assertNull(tr.getError());
     assertEquals(identifier, tr.getDescription());
-    assertTrue(tr.runTimeInNanos() >= TimeUnit.MILLISECONDS.toNanos(runTime));
+    assertTrue(tr.getRunTime(TimeUnit.MILLISECONDS) >= runTime);
   }
   
   private static List<TestStep> makeTestSteps(final Runnable startRunnable, int count) {
@@ -140,7 +140,7 @@ public class SimpleExecutionGraphTest {
     }, TEST_COMPLEXITY);
     addSteps(parallelSteps2, builder);
     
-    List<? extends ListenableFuture<TestResult>> futures = builder.startScript();
+    List<? extends ListenableFuture<TestResult>> futures = builder.build().startScript();
     assertEquals(TEST_COMPLEXITY * 2, futures.size());
     
     FutureUtils.blockTillAllComplete(futures);
@@ -167,7 +167,7 @@ public class SimpleExecutionGraphTest {
     }, TEST_COMPLEXITY);
     addSteps(parallelSteps2, builder);
     
-    List<? extends ListenableFuture<TestResult>> futures = builder.startScript();
+    List<? extends ListenableFuture<TestResult>> futures = builder.build().startScript();
     assertEquals(TEST_COMPLEXITY * 2 + 1, futures.size());
     
     for (int i = 0; i < futures.size(); i++) {
