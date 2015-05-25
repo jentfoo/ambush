@@ -2,7 +2,6 @@ package org.threadly.load;
 
 import java.util.Collection;
 import java.util.Iterator;
-import java.util.concurrent.Executor;
 
 import org.threadly.concurrent.future.SettableListenableFuture;
 import org.threadly.load.ExecutableScript.ExecutionItem;
@@ -15,7 +14,7 @@ import org.threadly.load.SequentialScriptBuilder.SequentialStep;
  */
 public class ParallelScriptBuilder extends AbstractScriptBuilder {
   protected final ParallelStep currentStep;
-  private int threadsNeeded = 0;
+  private int stepsThreadsNeeded = 0;
   
   /**
    * Constructs a new {@link ParallelScriptBuilder}.  This can be used as either the start of a 
@@ -91,8 +90,8 @@ public class ParallelScriptBuilder extends AbstractScriptBuilder {
   }
   
   private void incrementThreads(int value) {
-    threadsNeeded += value;
-    maybeUpdatedMaximumThreads(threadsNeeded);
+    stepsThreadsNeeded += value;
+    maybeUpdatedMaximumThreads(stepsThreadsNeeded);
   }
   
   /**
@@ -107,7 +106,7 @@ public class ParallelScriptBuilder extends AbstractScriptBuilder {
   @Override
   public void addSteps(SequentialScriptBuilder sequentialSteps) {
     verifyValid();
-    incrementThreads(sequentialSteps.getMaximumThreadsNeeded());
+    incrementThreads(sequentialSteps.getNeededThreadCount());
     currentStep.addItem(new SequentialTestWrapper(sequentialSteps));
   }
   
@@ -121,7 +120,7 @@ public class ParallelScriptBuilder extends AbstractScriptBuilder {
   @Override
   public void addSteps(ParallelScriptBuilder parallelSteps) {
     verifyValid();
-    incrementThreads(parallelSteps.getMaximumThreadsNeeded());
+    incrementThreads(parallelSteps.getNeededThreadCount());
     Iterator<ExecutionItem> it = parallelSteps.currentStep.steps.iterator();
     while (it.hasNext()) {
       currentStep.addItem(it.next());
@@ -140,8 +139,8 @@ public class ParallelScriptBuilder extends AbstractScriptBuilder {
     }
     
     @Override
-    public void runChainItem(ExecutableScript sourceBuilder, Executor executor) {
-      executor.execute(scriptStepRunner);
+    public void runChainItem(ExecutionAssistant assistant) {
+      assistant.executeAsyncIfStillRunning(scriptStepRunner);
     }
 
     @Override
@@ -172,11 +171,11 @@ public class ParallelScriptBuilder extends AbstractScriptBuilder {
     }
     
     @Override
-    public void runChainItem(final ExecutableScript sourceBuilder, final Executor executor) {
-      executor.execute(new Runnable() {
+    public void runChainItem(final ExecutionAssistant assistant) {
+      assistant.executeAsyncIfStillRunning(new Runnable() {
         @Override
         public void run() {
-          sequentialStep.runChainItem(sourceBuilder, executor);
+          sequentialStep.runChainItem(assistant);
         }
       });
       // no need to block this thread for these to run
@@ -201,10 +200,10 @@ public class ParallelScriptBuilder extends AbstractScriptBuilder {
   // TODO - can this be put into StepCollectionRunner
   protected static class ParallelStep extends StepCollectionRunner {
     @Override
-    public void runChainItem(ExecutableScript sourceBuilder, Executor executor) {
+    public void runChainItem(ExecutionAssistant assistant) {
       Iterator<ExecutionItem> it = steps.iterator();
       while (it.hasNext()) {
-        it.next().runChainItem(sourceBuilder, executor);
+        it.next().runChainItem(assistant);
       }
     }
 

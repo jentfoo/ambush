@@ -8,11 +8,13 @@ import org.threadly.util.Clock;
 import org.threadly.util.StringUtils;
 
 @SuppressWarnings("javadoc")
-public class ScriptRunnerTest {
+public class ScriptRunnerBasicScriptTest {
+  private static final String boolKey = "bool";
   private static final String intKey = "int";
   private static final String longKey = "long";
   private static final String doubleKey = "double";
   private static final String stringKey = "str";
+  private static final boolean boolTestVal = true;
   private static final int intTestVal = 10;
   private static final long longTestVal = Clock.lastKnownTimeMillis();
   private static final double doubleTestVal = Clock.lastKnownTimeMillis() / 1000.;
@@ -22,6 +24,7 @@ public class ScriptRunnerTest {
   @Test
   public void runSimpleScriptTest() throws InterruptedException, TimeoutException {
     String[] args = new String[] {SimpleScriptFactory.class.getName(), 
+                                  boolKey + "=" + boolTestVal, 
                                   intKey + "=" + intTestVal, 
                                   longKey + "=" + longTestVal, 
                                   doubleKey + "=" + doubleTestVal, 
@@ -34,7 +37,18 @@ public class ScriptRunnerTest {
     @Override
     public ExecutableScript buildScript() {
       SequentialScriptBuilder scriptBuilder = new SequentialScriptBuilder();
-      
+
+      scriptBuilder.addStep(new ScriptStepInterface() {
+        @Override
+        public String getIdentifier() {
+          return "bool verifier";
+        }
+
+        @Override
+        public void runStep() throws Exception {
+          av.assertEquals(boolTestVal, getBoolValue(boolKey));
+        }
+      });
       scriptBuilder.addStep(new ScriptStepInterface() {
         @Override
         public String getIdentifier() {
@@ -42,7 +56,7 @@ public class ScriptRunnerTest {
         }
 
         @Override
-        public void runTest() throws Exception {
+        public void runStep() throws Exception {
           av.assertEquals(intTestVal, getIntValue(intKey));
         }
       });
@@ -53,7 +67,7 @@ public class ScriptRunnerTest {
         }
 
         @Override
-        public void runTest() throws Exception {
+        public void runStep() throws Exception {
           av.assertEquals(longTestVal, getLongValue(longKey));
         }
       });
@@ -64,7 +78,7 @@ public class ScriptRunnerTest {
         }
 
         @Override
-        public void runTest() throws Exception {
+        public void runStep() throws Exception {
           av.assertEquals(doubleTestVal, getDoubleValue(doubleKey));
         }
       });
@@ -75,7 +89,7 @@ public class ScriptRunnerTest {
         }
 
         @Override
-        public void runTest() throws Exception {
+        public void runStep() throws Exception {
           av.assertEquals(stringTestVal, getStringValue(stringKey));
         }
       });
@@ -86,7 +100,7 @@ public class ScriptRunnerTest {
         }
 
         @Override
-        public void runTest() throws Exception {
+        public void runStep() throws Exception {
           av.signalComplete();
         }
       });

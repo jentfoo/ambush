@@ -9,6 +9,8 @@ import java.util.concurrent.TimeUnit;
 import org.threadly.concurrent.future.ListenableFuture;
 import org.threadly.load.ScriptFactory.TestParameterException;
 import org.threadly.util.Clock;
+import org.threadly.util.ExceptionHandlerInterface;
+import org.threadly.util.ExceptionUtils;
 import org.threadly.util.StringUtils;
 
 /**
@@ -25,33 +27,58 @@ public class ScriptRunner {
    * @throws InterruptedException Thrown if this thread is interrupted while waiting on test to run
    */
   public static void main(String[] args) throws InterruptedException {
-    ExecutableScript script = parseArgsAndGetScript(args);
-    long start = Clock.accurateForwardProgressingMillis();
-    List<ListenableFuture<StepResult>> futures = script.startScript();
-    List<StepResult> fails = StepResultCollectionUtils.getAllFailedResults(futures);
-    long end = Clock.accurateForwardProgressingMillis();
-    if (fails.isEmpty()) {
-      System.out.println("All tests passed after running for " + ((end - start) / 1000) + " seconds");
-      double averageRunMillis = StepResultCollectionUtils.getAverageRuntime(futures, TimeUnit.MILLISECONDS);
-      System.out.println("Average time spent per test step: " + averageRunMillis + " milliseconds");
-      StepResult longestStep = StepResultCollectionUtils.getLongestRuntimeStep(futures);
-      System.out.println("Longest running step: " + longestStep.getDescription() + 
-                           ", ran for: " + longestStep.getRunTime(TimeUnit.MILLISECONDS) + " milliseconds");
-    } else {
-      System.out.println(fails.size() + " TEST FAILED!!");
-      Iterator<StepResult> it = fails.iterator();
-      while (it.hasNext()) {
-        StepResult tr = it.next();
-        System.out.println("Test " + tr.getDescription() + " failed for cause:");
-        tr.getError().printStackTrace();
-      }
+    setupExceptionHandler();
+    ScriptRunner runner = null;
+    try {
+      runner = new ScriptRunner(args);
+    } catch (Throwable t) {
+      System.err.println("Unexpected failure when building script: ");
+      printFailureAndExit(t);
     }
+    runner.runScript();
   }
   
-  private static ExecutableScript parseArgsAndGetScript(String[] args) {
+  /**
+   * Sets up a default {@link ExceptionHandlerInterface} so that if any uncaught exceptions occur, 
+   * the script will display the exception and exit.  There should never be any uncaught 
+   * exceptions, this likely would indicate a bug in Ambush. 
+   */
+  protected static void setupExceptionHandler() {
+    ExceptionUtils.setDefaultExceptionHandler(new ExceptionHandlerInterface() {
+      @Override
+      public void handleException(Throwable thrown) {
+        synchronized (this) { // synchronized to prevent terminal corruption from multiple failures
+          System.err.println("Unexpected uncaught exception: ");
+          printFailureAndExit(thrown);
+        }
+      }
+    });
+  }
+  
+  /**
+   * Prints the throwable to standard error then exits with a non-zero exit code which matches to 
+   * the throwable's message.
+   * 
+   * @param t The throwable which caused the failure
+   */
+  protected static void printFailureAndExit(Throwable t) {
+    t.printStackTrace();
+    int hashCode = StringUtils.makeNonNull(t.getMessage()).hashCode();
+    if (hashCode == 0) {
+      hashCode = -1;
+    }
+    System.exit(hashCode);
+  }
+
+  private final ExecutableScript script;
+  
+  protected ScriptRunner(String[] args) {
     if (args.length == 0) {
       System.err.println("No arguments provided, need ScriptFactory class");
       usageAndExit(null);
+      // in test situations usageAndExit may not exit
+      script = null;
+      return;
     }
     
     String classStr = args[0];
@@ -88,9 +115,14 @@ public class ScriptRunner {
       }
     }
     
+    // may be null in test situations, not a normal case
+    if (factory == null) {
+      script = null;
+      return;
+    }
     factory.initialize(props);
     try {
-      return factory.buildScript();
+      script = factory.buildScript();
     } catch (TestParameterException e) {
       Map<String, String> paramDocs = factory.getPossibleParameters();
       if (paramDocs == null || paramDocs.isEmpty()) {
@@ -121,16 +153,39 @@ public class ScriptRunner {
       System.err.print(paramDefs.toString());
       
       usageAndExit(factory.getClass().getName());
-      throw e;
+      throw e;  // should not really throw unless someone has overridden {@link usageAndExit}
     }
   }
   
-  private static void usageAndExit(String runningScript) {
+  protected void usageAndExit(String runningScript) {
     if (runningScript == null || runningScript.isEmpty()) {
       runningScript = "script.factory.to.call";
     }
-    System.out.println("java " + ScriptRunner.class.getName() + 
+    System.err.println("java " + ScriptRunner.class.getName() + 
                          " " + runningScript + " key1=value1 key2=value2....");
     System.exit(1);
+  }
+  
+  private void runScript() throws InterruptedException {
+    long start = Clock.accurateForwardProgressingMillis();
+    List<ListenableFuture<StepResult>> futures = script.startScript();
+    List<StepResult> fails = StepResultCollectionUtils.getAllFailedResults(futures);
+    long end = Clock.accurateForwardProgressingMillis();
+    if (fails.isEmpty()) {
+      System.out.println("All tests passed after running for " + ((end - start) / 1000) + " seconds");
+      double averageRunMillis = StepResultCollectionUtils.getAverageRuntime(futures, TimeUnit.MILLISECONDS);
+      System.out.println("Average time spent per test step: " + averageRunMillis + " milliseconds");
+      StepResult longestStep = StepResultCollectionUtils.getLongestRuntimeStep(futures);
+      System.out.println("Longest running step: " + longestStep.getDescription() + 
+                           ", ran for: " + longestStep.getRunTime(TimeUnit.MILLISECONDS) + " milliseconds");
+    } else {
+      System.out.println(fails.size() + " TEST FAILED!!");
+      Iterator<StepResult> it = fails.iterator();
+      while (it.hasNext()) {
+        StepResult tr = it.next();
+        System.out.println("Test " + tr.getDescription() + " failed for cause:");
+        tr.getError().printStackTrace();
+      }
+    }
   }
 }

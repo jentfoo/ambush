@@ -1,7 +1,6 @@
 package org.threadly.load;
 
 import java.util.Iterator;
-import java.util.concurrent.Executor;
 
 import org.threadly.concurrent.future.FutureUtils;
 import org.threadly.load.ExecutableScript.ExecutionItem;
@@ -78,7 +77,7 @@ public class SequentialScriptBuilder extends AbstractScriptBuilder {
   @Override
   public void addSteps(SequentialScriptBuilder sequentialSteps) {
     verifyValid();
-    maybeUpdatedMaximumThreads(sequentialSteps.getMaximumThreadsNeeded() + 1);
+    maybeUpdatedMaximumThreads(sequentialSteps.getNeededThreadCount() + 1);
     Iterator<ExecutionItem> it = sequentialSteps.currentStep.steps.iterator();
     while (it.hasNext()) {
       currentStep.addItem(it.next());
@@ -95,7 +94,7 @@ public class SequentialScriptBuilder extends AbstractScriptBuilder {
    */
   @Override
   public void addSteps(ParallelScriptBuilder parallelSteps) {
-    maybeUpdatedMaximumThreads(parallelSteps.getMaximumThreadsNeeded() + 1);
+    maybeUpdatedMaximumThreads(parallelSteps.getNeededThreadCount() + 1);
     addStep(parallelSteps.currentStep);
   }
   
@@ -112,7 +111,7 @@ public class SequentialScriptBuilder extends AbstractScriptBuilder {
     }
     
     @Override
-    public void runChainItem(ExecutableScript runningScriptBuilder, Executor executor) {
+    public void runChainItem(ExecutionAssistant coordinator) {
       scriptStepRunner.run();
     }
 
@@ -130,11 +129,11 @@ public class SequentialScriptBuilder extends AbstractScriptBuilder {
   // TODO - can this be put into StepCollectionRunner
   protected static class SequentialStep extends StepCollectionRunner {
     @Override
-    public void runChainItem(ExecutableScript runningScriptBuilder, final Executor executor) {
+    public void runChainItem(ExecutionAssistant assistant) {
       Iterator<ExecutionItem> it = steps.iterator();
       while (it.hasNext()) {
         ExecutionItem chainItem = it.next();
-        chainItem.runChainItem(runningScriptBuilder, executor);
+        chainItem.runChainItem(assistant);
         // this call will block till execution is done, thus making us wait to run the next chain item
         try {
           if (StepResultCollectionUtils.getFailedResult(chainItem.getFutures()) != null) {
