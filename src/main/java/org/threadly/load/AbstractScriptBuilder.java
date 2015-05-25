@@ -173,6 +173,12 @@ public abstract class AbstractScriptBuilder {
     return new ExecutableScript(neededThreadCount, stepRunners);
   }
   
+  /**
+   * <p>A simple implementation of {@link ChildItems} which takes in a list of items that it is 
+   * holding.</p>
+   * 
+   * @author jent - Mike Jensen
+   */
   protected static class ChildItemContainer implements ChildItems {
     private final List<ExecutionItem> items;
     private final boolean runSequentially;

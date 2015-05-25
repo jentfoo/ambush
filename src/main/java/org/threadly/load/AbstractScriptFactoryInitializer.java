@@ -7,7 +7,13 @@ import java.util.Properties;
 import org.threadly.load.ScriptFactory.TestParameterException;
 import org.threadly.util.StringUtils;
 
-public class AbstractScriptFactoryInitializer {
+/**
+ * <p>Abstract implementation for a class which initializes a factory.  Usually a main class which 
+ * is accepting arguments for what and how to construct a {@link ScriptFactory}.</p>
+ * 
+ * @author jent - Mike Jensen
+ */
+abstract class AbstractScriptFactoryInitializer {
   protected final ExecutableScript script;
   
   protected AbstractScriptFactoryInitializer(String[] args) {

@@ -8,6 +8,13 @@ import org.threadly.load.ExecutableScript.ExecutionItem;
 import org.threadly.load.ExecutableScript.ExecutionItem.ChildItems;
 import org.threadly.load.gui.Node;
 
+/**
+ * <p>Class which builds a graph of {@link Node}'s based off a script produced by a 
+ * {@link ScriptFactory}.  This builds a script and then traverses the executable items to produce 
+ * a graph of {@link Node} objects.</p>
+ * 
+ * @author jent - Mike Jensen
+ */
 public class ScriptGraphBuilder extends AbstractScriptFactoryInitializer {
   public static Node buildGraph(String[] args) {
     return new ScriptGraphBuilder(args).makeGraph();
@@ -29,7 +36,7 @@ public class ScriptGraphBuilder extends AbstractScriptFactoryInitializer {
   
   private Node expandNode(Node previousNode, ExecutionItem item, AtomicInteger chainLength) {
     ChildItems childItems = item.getChildItems();
-    if (childItems.hasChildren()) {
+    if (! childItems.hasChildren()) {
       Node result = new Node(item.toString());
       previousNode.addChildNode(result);
       chainLength.incrementAndGet();

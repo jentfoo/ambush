@@ -198,14 +198,42 @@ public class ExecutableScript {
      */
     public ExecutionItem makeCopy();
     
-    // TODO - javadoc
+    /**
+     * Get information about if this {@link ExecutionItem} has child items it runs or not.  This 
+     * can be used to understand the graph structure for execution.
+     * 
+     * @return A implementation of {@link ChildItems} to understand child execution
+     */
     public ChildItems getChildItems();
     
+    /**
+     * <p>Class which represents child items which may be executed by this instance of an 
+     * {@link ExecutionItem}.</p>
+     * 
+     * @author jent - Mike Jensen
+     */
     public interface ChildItems {
+      /**
+       * Check to know if this item runs child items sequentially, waiting till one finishes 
+       * before starting the next one.
+       * 
+       * @return {@code true} if child items are run sequentially
+       */
       public boolean itemsRunSequential();
 
+      /**
+       * Check to see if this execution item runs other items.
+       * 
+       * @return {@code true} if this {@link ExecutionItem} runs multiple {@link ExecutionItem}'s
+       */
       public boolean hasChildren();
 
+      /**
+       * Get an iterator which will iterate over the executable items.  No modifications should be 
+       * done through this iterator.
+       * 
+       * @return Iterator of items that will be executed when this item is executed
+       */
       public Iterator<ExecutionItem> iterator();
     }
     
