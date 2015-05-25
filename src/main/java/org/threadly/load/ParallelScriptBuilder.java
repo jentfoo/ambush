@@ -2,7 +2,6 @@ package org.threadly.load;
 
 import java.util.Collection;
 import java.util.Iterator;
-
 import org.threadly.concurrent.future.SettableListenableFuture;
 import org.threadly.load.ExecutableScript.ExecutionItem;
 import org.threadly.load.SequentialScriptBuilder.SequentialStep;
@@ -103,6 +102,7 @@ public class ParallelScriptBuilder extends AbstractScriptBuilder {
    * 
    * @param sequentialSteps Sequential steps to add to this builder
    */
+  // TODO - what about previous chain items from the current step provided, this only gets future steps
   @Override
   public void addSteps(SequentialScriptBuilder sequentialSteps) {
     verifyValid();
@@ -117,6 +117,7 @@ public class ParallelScriptBuilder extends AbstractScriptBuilder {
    * 
    * @param parallelSteps Parallel steps to add to this builder
    */
+  // TODO - what about previous chain items from the current step provided, this only gets future steps
   @Override
   public void addSteps(ParallelScriptBuilder parallelSteps) {
     verifyValid();
@@ -190,6 +191,11 @@ public class ParallelScriptBuilder extends AbstractScriptBuilder {
     public ExecutionItem makeCopy() {
       return new SequentialTestWrapper(sequentialStep.makeCopy());
     }
+
+    @Override
+    public ChildItems getChildItems() {
+      return new ChildItemContainer(sequentialStep.steps, false);
+    }
   }
   
   /**
@@ -215,6 +221,11 @@ public class ParallelScriptBuilder extends AbstractScriptBuilder {
         result.addItem(it.next().makeCopy());
       }
       return result;
+    }
+
+    @Override
+    public ChildItems getChildItems() {
+      return new ChildItemContainer(steps, false);
     }
   }
 }

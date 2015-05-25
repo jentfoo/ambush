@@ -173,7 +173,7 @@ public class ExecutableScript {
    * 
    * @author jent - Mike Jensen
    */
-  public interface ExecutionItem {
+  protected interface ExecutionItem {
     /**
      * Run the current items execution.  This may execute async on the provided 
      * {@link ExecutionAssistant}, but returned futures from {@link #getFutures()} should not fully 
@@ -197,6 +197,17 @@ public class ExecutableScript {
      * @return A copy of the test item
      */
     public ExecutionItem makeCopy();
+    
+    // TODO - javadoc
+    public ChildItems getChildItems();
+    
+    public interface ChildItems {
+      public boolean itemsRunSequential();
+
+      public boolean hasChildren();
+
+      public Iterator<ExecutionItem> iterator();
+    }
     
     /**
      * <p>Class passed to the test item at the start of execution.  This can provide information 

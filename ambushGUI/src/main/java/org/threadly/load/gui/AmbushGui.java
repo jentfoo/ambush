@@ -2,6 +2,7 @@ package org.threadly.load.gui;
 
 import org.eclipse.swt.widgets.Display;
 import org.threadly.concurrent.PriorityScheduler;
+import org.threadly.load.ScriptGraphBuilder;
 
 /**
  * <p>Class which is responsible for starting up the gui to display ambush scripts.</p>
@@ -14,7 +15,7 @@ public class AmbushGui {
    * 
    * @param args String array representing arguments for execution
    */
-  public static void main (String[] args) {
+  public static void main(String[] args) {
     Display display = null;
     try {
       display = new Display();
@@ -30,8 +31,7 @@ public class AmbushGui {
       try {
         AmbushGraph gui = new AmbushGraph(scheduler, display);
         
-        // TODO - build the graph based off the real test
-        Node head = new Node("head");
+        /*Node head = new Node("head");
         Node chain1s1 = new Node("chain1s1");
         head.addChildNode(chain1s1);
         Node chain2s1 = new Node("chain2s1");
@@ -69,7 +69,9 @@ public class AmbushGui {
         p4.addChildNode(end);
         p4.addChildNode(new Node("fake tail"));
         
-        gui.updateGraphModel(head);
+        gui.updateGraphModel(head);*/
+        
+        gui.updateGraphModel(ScriptGraphBuilder.buildGraph(args));
         
         gui.runGuiLoop();
       } finally {
