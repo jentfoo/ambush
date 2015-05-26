@@ -27,23 +27,19 @@ public class ScriptGraphBuilder extends AbstractScriptFactoryInitializer {
     Node head = new Node("start");
     Node current = head;
     Iterator<ExecutionItem> it = steps.iterator();
-    boolean chainOfOne = steps.size() == 1;
     while (it.hasNext()) {
-      current = expandNode(head, it.next(), chainOfOne, new AtomicInteger());
+      current = expandNode(current, it.next(), new AtomicInteger());
     }
     
-    if (current.isBranchOrMergeNode()) {
-      current.deleteFromGraph();
-    }
+    head.cleanGraph();
+    
     return head;
   }
   
-  private static Node expandNode(Node previousNode, ExecutionItem item, 
-                                 boolean onlyItemOnChain, AtomicInteger chainLength) {
+  private static Node expandNode(Node previousNode, ExecutionItem item, AtomicInteger chainLength) {
     ChildItems childItems = item.getChildItems();
     if (! childItems.hasChildren()) {
       Node result = new Node(item.toString());
-      previousNode = previousNode.replaceWithParentIfMergeWithOneParent();
       previousNode.addChildNode(result);
       chainLength.incrementAndGet();
       return result;
@@ -52,19 +48,15 @@ public class ScriptGraphBuilder extends AbstractScriptFactoryInitializer {
       List<Node> childNodes = new LinkedList<Node>();
       Node longestNode = previousNode;
       Iterator<ExecutionItem> it = childItems.iterator();
-      if (! childItems.itemsRunSequential() && ! previousNode.isBranchOrMergeNode()) {
+      if (! childItems.itemsRunSequential()) {
         Node branchPoint = new Node();
         previousNode.addChildNode(branchPoint);
         previousNode = branchPoint;
       }
-      Boolean chainOfOne = null;
       while (it.hasNext()) {
-        if (chainOfOne == null) {
-          chainOfOne = ! it.hasNext();
-        }
         ExecutionItem childItem = it.next();
         AtomicInteger length = new AtomicInteger();
-        Node endNode = expandNode(previousNode, childItem, chainOfOne, length);
+        Node endNode = expandNode(previousNode, childItem, length);
         if (childItems.itemsRunSequential()) {
           previousNode = endNode;
         }
@@ -74,7 +66,7 @@ public class ScriptGraphBuilder extends AbstractScriptFactoryInitializer {
         }
         childNodes.add(endNode);
       }
-      if (childItems.itemsRunSequential() || childNodes.size() == 1) {
+      if (childItems.itemsRunSequential() || maxLength < 1) {
         return longestNode;
       } else {
         Node joinPoint = new Node();
