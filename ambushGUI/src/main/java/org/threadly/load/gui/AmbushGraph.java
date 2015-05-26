@@ -30,8 +30,8 @@ import org.threadly.util.Clock;
  * @author jent - Mike Jensen
  */
 public class AmbushGraph implements DragDetectListener, MouseListener, MouseMoveListener {
-  private static final int X_SIZE = 1024;
-  private static final int Y_SIZE = 768;
+  private static final int X_SIZE = 1900;
+  private static final int Y_SIZE = 1400;
   private static final int DRAG_TOLLERANCE = 25;
   private static final int REFRESH_DELAY = 500;
   private static final int BACKGROUND_GRAY = 210;

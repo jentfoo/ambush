@@ -183,6 +183,10 @@ public abstract class AbstractScriptBuilder {
     private final List<ExecutionItem> items;
     private final boolean runSequentially;
     
+    protected ChildItemContainer() {
+      this(null, true);
+    }
+    
     protected ChildItemContainer(List<ExecutionItem> items, boolean runSequentially) {
       this.items = items;
       this.runSequentially = runSequentially;
@@ -195,12 +199,16 @@ public abstract class AbstractScriptBuilder {
 
     @Override
     public boolean hasChildren() {
-      return ! items.isEmpty();
+      return items != null;
     }
 
     @Override
     public Iterator<ExecutionItem> iterator() {
-      return Collections.unmodifiableList(items).iterator();
+      if (items == null) {
+        return Collections.<ExecutionItem>emptyList().iterator();
+      } else {
+        return Collections.unmodifiableList(items).iterator();
+      }
     }
   }
   
@@ -247,7 +255,7 @@ public abstract class AbstractScriptBuilder {
 
     @Override
     public ChildItems getChildItems() {
-      return new ChildItemContainer(Collections.<ExecutionItem>emptyList(), true);
+      return new ChildItemContainer();
     }
 
     @Override
@@ -319,7 +327,7 @@ public abstract class AbstractScriptBuilder {
 
     @Override
     public ChildItems getChildItems() {
-      return new ChildItemContainer(Collections.<ExecutionItem>emptyList(), true);
+      return new ChildItemContainer();
     }
     
     @Override

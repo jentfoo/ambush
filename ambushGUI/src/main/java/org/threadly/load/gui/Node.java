@@ -4,14 +4,27 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+import org.threadly.util.StringUtils;
+
 /**
  * <p>Class which represents a node on the graph.</p>
  * 
  * @author jent - Mike Jensen
  */
 public class Node {
-  private final String name;
+  private static final String BRANCH_NAME = StringUtils.randomString(64);
+
+  protected final List<Node> parentNodes;
   private final List<Node> childNodes;
+  private final String name;
+  
+  /**
+   * Constructs a new graph node with a specified identifier.  This is a node which is a branch or 
+   * fork point.
+   */
+  public Node() {
+    this(BRANCH_NAME);
+  }
   
   /**
    * Constructs a new graph node with a specified identifier.
@@ -21,6 +34,7 @@ public class Node {
   public Node(String name) {
     this.name = name;
     childNodes = new ArrayList<Node>(2);
+    parentNodes = new ArrayList<Node>(2);
   }
   
   /**
@@ -29,7 +43,15 @@ public class Node {
    * @return Name of this node
    */
   public String getName() {
-    return name;
+    if (isBranchOrMergeNode()) {
+      return "";
+    } else {
+      return name;
+    }
+  }
+  
+  public boolean isBranchOrMergeNode() {
+    return BRANCH_NAME.equals(name);
   }
   
   @Override
@@ -44,6 +66,9 @@ public class Node {
    */
   public void addChildNode(Node node) {
     if (! childNodes.contains(node)) {
+      if (! node.parentNodes.contains(this)) {
+        node.parentNodes.add(this);
+      }
       childNodes.add(node);
     }
   }
@@ -55,5 +80,29 @@ public class Node {
    */
   public List<Node> getChildNodes() {
     return Collections.unmodifiableList(childNodes);
+  }
+
+  public void deleteFromGraph() {
+    for(Node n : parentNodes) {
+      n.childNodes.remove(this);
+    }
+  }
+
+  public void replace(Node node) {
+    deleteFromGraph();
+    for(Node n : parentNodes) {
+      n.addChildNode(node);
+    }
+  }
+
+  public Node replaceWithParentIfMergeWithOneParent() {
+    if (isBranchOrMergeNode()) {
+      if (parentNodes.size() == 1) {
+        Node parentNode = parentNodes.get(0);
+        parentNode.childNodes.remove(this);
+        return parentNode;
+      }
+    }
+    return this;
   }
 }
