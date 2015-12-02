@@ -5,11 +5,13 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
+
 import org.threadly.concurrent.future.FutureUtils;
 import org.threadly.concurrent.future.ListenableFuture;
 import org.threadly.concurrent.future.SettableListenableFuture;
 import org.threadly.load.ExecutableScript.ExecutionItem;
 import org.threadly.load.ExecutableScript.ExecutionItem.ChildItems;
+import org.threadly.load.ExecutableScript.ExecutionItem.StepStartHandler;
 import org.threadly.util.ArgumentVerifier;
 import org.threadly.util.Clock;
 
@@ -25,6 +27,7 @@ public abstract class AbstractScriptBuilder {
 
   protected AbstractScriptBuilder() {
     neededThreadCount = 1;
+    replacementException = null;
   }
   
   /**
@@ -158,6 +161,9 @@ public abstract class AbstractScriptBuilder {
    * @return The script step as an ExecutionItem
    */
   protected abstract ExecutionItem getStepAsExecutionItem();
+
+  // TODO - javadoc
+  protected abstract void setStartHandlerOnAllSteps(StepStartHandler startHandler);
   
   /**
    * Marks this builder as replaced.  Once replaced no operations can continue to happen on this 
@@ -252,7 +258,7 @@ public abstract class AbstractScriptBuilder {
     }
     
     @Override
-    public void runChainItem(ExecutionAssistant assistant) {
+    protected void runItem(ExecutionAssistant assistant) {
       assistant.setStepPerSecondLimit(newRateLimit);
     }
 
@@ -280,7 +286,7 @@ public abstract class AbstractScriptBuilder {
     }
 
     @Override
-    public void runChainItem(ExecutionAssistant assistant) {
+    protected void runItem(ExecutionAssistant assistant) {
       try {
         List<? extends ListenableFuture<?>> scriptFutures = assistant.getGlobalRunningFutureSet();
         double doneCount = 0;
@@ -314,7 +320,7 @@ public abstract class AbstractScriptBuilder {
    * 
    * @author jent - Mike Jensen
    */
-  protected abstract static class GhostExecutionItem implements ExecutionItem {
+  protected abstract static class GhostExecutionItem extends AbstractExecutionItem {
     @Override
     public void prepareForRun() {
       // nothing to do here
@@ -352,7 +358,7 @@ public abstract class AbstractScriptBuilder {
    * 
    * @author jent - Mike Jensen
    */
-  protected abstract static class StepCollectionRunner implements ExecutionItem {
+  protected abstract static class StepCollectionRunner extends AbstractExecutionItem {
     private final ArrayList<SettableListenableFuture<StepResult>> futures;
     private ExecutionItem[] steps;
     
@@ -483,7 +489,7 @@ public abstract class AbstractScriptBuilder {
    * 
    * @author jent - Mike Jensen
    */
-  protected static class ScriptStepRunner implements ExecutionItem {
+  protected static class ScriptStepRunner extends AbstractExecutionItem {
     protected ScriptStep scriptStep;
     protected SettableListenableFuture<StepResult> future;
     
@@ -504,7 +510,7 @@ public abstract class AbstractScriptBuilder {
     }
 
     @Override
-    public void runChainItem(ExecutionAssistant assistant) {
+    protected void runItem(ExecutionAssistant assistant) {
       if (scriptStep == null) {
         throw new IllegalStateException("Run has completed");
       }
@@ -557,6 +563,26 @@ public abstract class AbstractScriptBuilder {
     public boolean isChainExecutor() {
       return false;
     }
+  }
+  
+  protected abstract static class AbstractExecutionItem implements ExecutionItem {
+    private StepStartHandler handler = null;
+
+    @Override
+    public void setStartHandler(StepStartHandler handler) {
+      this.handler = handler;
+    }
+    
+    @Override
+    public final void itemReadyForExecution(ExecutionAssistant assistant) {
+      if (handler != null) {
+        handler.readyToRun(this, assistant);
+      } else {
+        runItem(assistant);
+      }
+    }
+    
+    protected abstract void runItem(ExecutionAssistant assistant);
   }
   
   /**
